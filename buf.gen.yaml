@@ -1,0 +1,11 @@
+version: v2
+inputs:
+  - directory: proto
+plugins:
+  - local: ["./protoc-gen-mbt.exe"]
+    out: .
+    opt:
+      - project_name=sqlc_plugin
+      - json=false
+      - async=false
+      - username=ryota0624
