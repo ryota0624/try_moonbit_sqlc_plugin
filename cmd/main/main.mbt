@@ -1,9 +1,11 @@
 ///|
+#cfg(target="native")
 fn main {
   @async.run_async_main(main_async)
 }
 
 ///|
+#cfg(target="native")
 async fn main_async() -> Unit {
   let input = @stdio.stdin.read_all()
   let request = @lib.parse_generate_request(input.binary())

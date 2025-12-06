@@ -27,6 +27,7 @@ fn main {
 const BUFFER_LEN : UInt64 = 4096
 
 ///|
+#cfg(target="wasm")
 fn read_file(fd : @wasi.Fd) -> Array[Byte] raise @wasi.Errno {
   let result : Array[Byte] = []
   while true {

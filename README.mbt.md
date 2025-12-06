@@ -28,6 +28,7 @@ codegenerateを実装してsqlcから動くことを確認
 
 moon build --target wasmは通らない
 moon build --target wasmが通るように実装
+wasm component modelはsqlc側が対応していない！のでwasi対応にする
 1. wasi対応のライブラリを使う。
 2. パッケージの分離
 wasmをwasmtime経由でsqlcから動かすことを確認

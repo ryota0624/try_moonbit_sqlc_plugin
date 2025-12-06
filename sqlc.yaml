@@ -10,17 +10,15 @@
 #     cmd: ./dump_stdin_to_stderr.sh
 version: '2'
 plugins:
-- name: moonbit
-  process:
-    cmd: target/native/release/build/cmd/main/main.exe
-# plugins:
 # - name: moonbit
 #   process:
-#     cmd: ./cmd/main/wasm/exec_on_wasmtime.sh
-# plugins:
+#     cmd: target/native/release/build/cmd/main/main.exe
+- name: moonbit
+  process:
+    cmd: ./cmd/wasm/exec_on_wasmtime.sh
 # - name: moonbit
 #   wasm:
-#     url: file://cmd/main/wasm/target/wasm/release/build/sqlc_gen_mbt_wasm.wasm
+#     url: file://target/wasm/release/build/cmd/wasm/wasm.wasm
 #     sha256: d2020b942d845d957b549a29b51b1dfd71f7675c2d5d37ddad065ce3c5a34579
 sql:
 - name: sqlite
