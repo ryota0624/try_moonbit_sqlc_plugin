@@ -1,3 +1,0 @@
-[submodule "sqlc"]
-	path = sqlc
-	url = git@github.com:sqlc-dev/sqlc.git
