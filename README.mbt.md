@@ -32,3 +32,12 @@ moon build --target wasmが通るように実装
 2. パッケージの分離
 wasmをwasmtime経由でsqlcから動かすことを確認
 wasmファイルのchecksumを取得してsqlcに記載
+
+---
+
+
+
+rm -rf .mooncakes && moon  build cmd/wasm --target wasm
+rm -rf .mooncakes && moon  build cmd/native --target native
+
+.mooncakesが残っているとビルドに失敗するので削除してからビルドする

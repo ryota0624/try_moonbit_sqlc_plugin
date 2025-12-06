@@ -8,7 +8,8 @@
     },
     "moonbitlang/protobuf": "0.1.0",
     "ryota0624/mustache": "0.0.5",
-    "moonbitlang/async": "0.13.1"
+    "moonbitlang/async": "0.13.1",
+    "peter-jerry-ye/wasi": "0.22.4"
   },
   "readme": "README.mbt.md",
   "repository": "",
