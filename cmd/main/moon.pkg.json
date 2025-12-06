@@ -8,6 +8,7 @@
     "moonbitlang/async/stdio",
     "moonbitlang/async",
     "moonbitlang/async/io",
-    "ryota0624/sqlc_plugin/plugin"
+    "ryota0624/sqlc_plugin/plugin",
+    "moonbitlang/protobuf"
   ]
 }

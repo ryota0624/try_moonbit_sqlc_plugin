@@ -1,6 +1,7 @@
 {
 	"import": [
 		"ryota0624/sqlc_plugin/plugin",
-		"moonbitlang/protobuf"
+		"moonbitlang/protobuf",
+		"ryota0624/mustache"
 	]
 }

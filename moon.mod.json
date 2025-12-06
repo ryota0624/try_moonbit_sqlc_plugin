@@ -7,7 +7,8 @@
       "version": "0.1.0",
       "path": "./sqlc_plugin"
     },
-    "moonbitlang/protobuf": "0.1.0"
+    "moonbitlang/protobuf": "0.1.0",
+    "ryota0624/mustache": "0.0.5"
   },
   "readme": "README.mbt.md",
   "repository": "",
