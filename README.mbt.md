@@ -15,3 +15,5 @@ cat sqlc/protos/plugin/codegen.proto > proto/codegen.proto
 buf generate
 
 ## protoc pluginの疎通まで
+
+stdin to stdoutで動くことを確認
