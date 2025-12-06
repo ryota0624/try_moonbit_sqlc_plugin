@@ -4,6 +4,8 @@
     {
       "path": "username/try_moonbit_sqlc_plugin_dev",
       "alias": "lib"
-    }
+    },
+    "moonbitlang/async/stdio",
+    "moonbitlang/async"
   ]
 }
