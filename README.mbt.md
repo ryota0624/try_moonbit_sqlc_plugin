@@ -16,4 +16,6 @@ buf generate
 
 ## protoc pluginの疎通まで
 
-stdin to stdoutで動くことを確認
+shellでstdin to stdoutで動くことを確認
+moonbitで作ったバイナリでstdin to stdoutで動くことを確認
+moon build --target native

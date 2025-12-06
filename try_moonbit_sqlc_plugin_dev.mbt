@@ -18,3 +18,17 @@ pub fn sum(data~ : Array[Int], start? : Int = 0, length? : Int) -> Int {
     sum
   }
 }
+
+///|
+/// parse GenerateRequest from Bytes
+pub fn parse_generate_request(data : Bytes) -> @plugin.GenerateRequest raise {
+  @protobuf.BytesReader::from_bytes(data) |> @protobuf.Read::read
+}
+
+///|
+/// parse GenerateRequest from Array[Byte]
+pub fn parse_generate_request_from_array_bytes(
+  byte_array : Array[Byte],
+) -> @plugin.GenerateRequest raise {
+  Bytes::from_array(byte_array) |> parse_generate_request
+}

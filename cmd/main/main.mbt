@@ -7,5 +7,8 @@ fn main {
 ///|
 async fn main_async() -> Unit {
   let input = @stdio.stdin.read_all()
-  @stdio.stderr.write(input)
+  let request = @lib.parse_generate_request(input.binary())
+  for query in request.queries {
+    @stdio.stderr.write(query.name + "\n")
+  }
 }

@@ -6,6 +6,8 @@
       "alias": "lib"
     },
     "moonbitlang/async/stdio",
-    "moonbitlang/async"
+    "moonbitlang/async",
+    "moonbitlang/async/io",
+    "ryota0624/sqlc_plugin/plugin"
   ]
 }
