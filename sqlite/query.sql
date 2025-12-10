@@ -13,11 +13,19 @@ ORDER BY name;
 --   ?, ? 
 -- );
 
+/* name: create_author :exec */
+INSERT INTO authors (
+  id, name, bio
+) VALUES (
+  ?, ?, ? 
+);
+
+
 /* name: delete_author :exec */
 DELETE FROM authors
 WHERE id = ?;
 
-/* name: crete_author_table :exec */
+/* name: create_author_table :exec */
 CREATE TABLE authors (
           id   integer    PRIMARY KEY AUTOINCREMENT,
           name text   NOT NULL,

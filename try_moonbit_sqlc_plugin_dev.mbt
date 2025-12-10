@@ -71,10 +71,7 @@ pub fn process_generate_request(
   generate_request : @plugin.GenerateRequest,
 ) -> @plugin.GenerateResponse raise {
   let codes = generate_code(generate_request)
-  let file = @plugin.File::new(
-    "generated_queries.mbt",
-    @encoding/utf8.encode(codes),
-  )
+  let file = @plugin.File::new("queries.mbt", @encoding/utf8.encode(codes))
   let sqlite_pkg_json =
     #|{
     #|	"import": [
@@ -94,7 +91,7 @@ let sqlite_utility_code =
   #| pub suberror SQLiteError {
   #|   RowConversionError
   #|   PrepareStatementError
-  #| }
+  #| } derive(Show)
   #| 
   #| ///|
   #| trait FromRow {
@@ -188,12 +185,16 @@ fn Query::from_plugin_query(
     parameters: plugin_query.parameters.map(param => Parameter::{
       column: Column::new(
         name=param.column.name,
-        mbt_type=plugin_column_type_to_mbt_type(engine, param.column.type_),
+        mbt_type=plugin_column_type_to_mbt_type(
+          engine,
+          param.column.type_,
+          param.column.not_null,
+        ),
       ),
     }),
     columns: plugin_query.columns.map(col => Column::new(
       name=col.name,
-      mbt_type=plugin_column_type_to_mbt_type(engine, col.type_),
+      mbt_type=plugin_column_type_to_mbt_type(engine, col.type_, col.not_null),
     )),
     sql: plugin_query.text,
   }
@@ -203,9 +204,10 @@ fn Query::from_plugin_query(
 fn plugin_column_type_to_mbt_type(
   engine : String,
   plugin_type : @plugin.Identifier,
+  is_not_null : Bool,
 ) -> String raise {
   match engine {
-    "sqlite" => sqlite_plugin_column_type_to_mbt_type(plugin_type)
+    "sqlite" => sqlite_plugin_column_type_to_mbt_type(plugin_type, is_not_null)
     other => fail("Unsupported engine: \{other}")
   }
 }
@@ -213,11 +215,17 @@ fn plugin_column_type_to_mbt_type(
 ///|
 fn sqlite_plugin_column_type_to_mbt_type(
   plugin_type : @plugin.Identifier,
+  is_not_null : Bool,
 ) -> String raise {
-  match plugin_type.name {
+  let t = match plugin_type.name {
     "integer" => "Int"
     "text" => "String"
     other => fail("Unsupported SQLite column type: \{other}")
+  }
+  if is_not_null {
+    t
+  } else {
+    "Option[\{t}]"
   }
 }
 
@@ -272,8 +280,18 @@ fn generate_code_from_query(query : Query) -> String raise {
 }
 
 ///|
-fn sqlite_field_extractor_name_from_mbt_type(mbt_type : String, field_index: Int) -> String raise {
-  match mbt_type {
+fn sqlite_field_extractor_name_from_mbt_type(
+  mbt_type : String,
+  field_index : Int,
+) -> String raise {
+  /// TODO: option考慮
+  let has_option = mbt_type.has_prefix("Option[") && mbt_type.has_suffix("]")
+  let exclude_option = if has_option {
+    mbt_type.strip_prefix("Option[").unwrap().strip_suffix("]").unwrap()
+  } else {
+    mbt_type
+  }
+  let extract_primitive_type = match exclude_option {
     "Int" => "column_int(\{field_index})"
     "Int64" => "column_int64(\{field_index})"
     "Double" => "column_double(\{field_index})"
@@ -281,6 +299,11 @@ fn sqlite_field_extractor_name_from_mbt_type(mbt_type : String, field_index: Int
     "Bytes" => "column_blob(\{field_index})"
     other =>
       fail("Unsupported column type for FromRow implementation: \{other}")
+  }
+  if has_option {
+    "\{extract_primitive_type} |> Some"
+  } else {
+    extract_primitive_type
   }
 }
 
@@ -290,7 +313,7 @@ let bind_all_code =
 
 ///|
 let list_query_template =
-  #|fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> Array[{{result_type}}] raise SQLiteError {
+  #|pub fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> Array[{{result_type}}] raise SQLiteError {
   #|  let sql = {{{sql}}}
   #|  database
   #|   .query(sql)
@@ -309,7 +332,7 @@ let list_query_template =
 
 ///|
 let find_one_query_template =
-  #|fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> {{result_type}} raise SQLiteError {
+  #|pub fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> {{result_type}} raise SQLiteError {
   #|  let sql = {{{sql}}}
   #|  database
   #|  .query(sql)
@@ -324,12 +347,13 @@ let find_one_query_template =
 
 ///|
 let exec_query_template =
-  #|fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> Unit raise SQLiteError {
+  #|pub fn {{function_name}}(database: @sqlite.Database, {{#args}}{{name}}: {{type}},{{/args}}) -> Unit raise SQLiteError {
   #| let sql = {{{sql}}}
   #| database
   #| .prepare(sql)
   #| .map(stmt => {
   #|   {{{bind_all_code}}}
+  #|   // TODO: execute=falseの時の考慮
   #|   stmt.execute() |> ignore
   #|   stmt.finalize()
   #| })
