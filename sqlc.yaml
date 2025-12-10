@@ -10,12 +10,16 @@
 #     cmd: ./dump_stdin_to_stderr.sh
 version: '2'
 plugins:
-# - name: moonbit
-#   process:
-#     cmd: target/native/release/build/cmd/main/main.exe
 - name: moonbit
   process:
-    cmd: ./cmd/wasm/exec_on_wasmtime.sh
+    cmd: target/native/release/build/cmd/main/main.exe
+# version: '2'
+# plugins:
+# - name: moonbit
+#   process:
+#     cmd: ./cmd/wasm/exec_on_wasmtime.sh
+# version: '2'
+# plugins:
 # - name: moonbit
 #   wasm:
 #     url: file://target/wasm/release/build/cmd/wasm/wasm.wasm
