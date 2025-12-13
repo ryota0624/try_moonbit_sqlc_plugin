@@ -102,6 +102,7 @@ let sqlite_utility_code_error =
   #|pub suberror SQLiteError {
   #|  RowConversionError(ColumnExtractionError)
   #|  PrepareStatementError
+  #|  QueryExecutionError
   #|} derive(Show)
   #|
   #| ///|
@@ -116,6 +117,13 @@ let sqlite_utility_code_error =
   #|    @sqlite.SqlValue::Double(_) => "Double"
   #|    @sqlite.SqlValue::Text(_) => "Text"
   #|    @sqlite.SqlValue::Blob(_) => "Blob"
+  #|  }
+  #|}
+  #|fn execute_statement(stmt : @sqlite.Statement) -> Unit raise SQLiteError {
+  #|  let result = stmt.execute()
+  #|  stmt.finalize() |> ignore
+  #|  if !result {
+  #|    raise SQLiteError::QueryExecutionError
   #|  }
   #|}
 
@@ -478,9 +486,7 @@ let exec_query_template =
   #| .prepare(sql)
   #| .map(stmt => {
   #|   {{{bind_all_code}}}
-  #|   // TODO: execute=falseの時の考慮
-  #|   stmt.execute() |> ignore
-  #|   stmt.finalize()
+  #|  execute_statement(stmt)
   #| })
   #| .unwrap_or_error(PrepareStatementError)
   #|}
