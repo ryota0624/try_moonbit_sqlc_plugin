@@ -1,0 +1,15 @@
+{
+  "is-main": true,
+  "import": [
+    {
+      "path": "username/try_moonbit_sqlc_plugin_dev/generated",
+      "alias": "lib"
+    },
+    "mizchi/sqlite"
+  ],
+    "link": {
+    "native": {
+      "cc-link-flags": "-lsqlite3"
+    }
+  }
+}

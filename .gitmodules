@@ -1,3 +1,6 @@
 [submodule "sqlc"]
 	path = sqlc
 	url = git@github.com:sqlc-dev/sqlc.git
+[submodule "sqlite_lib"]
+	path = sqlite_lib
+	url = https://github.com/ryota0624/sqlite.mbt
