@@ -7,6 +7,7 @@ fn main {
       return
     }
   }
+  println("Database opened successfully")
   try {
     // @lib.create_author_table(db) |> ignore
     // @lib.create_author(db, 1, "John Doe", None) |> ignore

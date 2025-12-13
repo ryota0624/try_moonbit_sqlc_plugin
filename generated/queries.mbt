@@ -7,18 +7,19 @@ pub(all)struct ResultOfget_author {
 
 impl FromRow for ResultOfget_author with from_row(row : @sqlite.Statement) -> ResultOfget_author raise SQLiteError {
   try {
+    let row = SqliteStatement(row)
      
-      let id = row.column_int(0)
+    let id = row|>SqliteStatement::column(0)
      
-      let name = row.column_text(1) |> @encoding/utf8.decode
+    let name = row|>SqliteStatement::column(1)
      
-      let bio = row.column_text(2) |> @encoding/utf8.decode |> Some
+    let bio = row|>SqliteStatement::column(2)
     
     
     ResultOfget_author::{id, name, bio, }
     
   } catch {
-    _ => raise SQLiteError::RowConversionError
+    e => raise SQLiteError::RowConversionError(e)
   }
 }
 pub fn get_author(database: @sqlite.Database, id: Int,) -> ResultOfget_author raise SQLiteError {
@@ -43,18 +44,19 @@ pub(all)struct ResultOflist_authors {
 
 impl FromRow for ResultOflist_authors with from_row(row : @sqlite.Statement) -> ResultOflist_authors raise SQLiteError {
   try {
+    let row = SqliteStatement(row)
      
-      let id = row.column_int(0)
+    let id = row|>SqliteStatement::column(0)
      
-      let name = row.column_text(1) |> @encoding/utf8.decode
+    let name = row|>SqliteStatement::column(1)
      
-      let bio = row.column_text(2) |> @encoding/utf8.decode |> Some
+    let bio = row|>SqliteStatement::column(2)
     
     
     ResultOflist_authors::{id, name, bio, }
     
   } catch {
-    _ => raise SQLiteError::RowConversionError
+    e => raise SQLiteError::RowConversionError(e)
   }
 }
 pub fn list_authors(database: @sqlite.Database, ) -> Array[ResultOflist_authors] raise SQLiteError {
@@ -80,12 +82,13 @@ pub(all)struct ResultOfcreate_author {
 
 impl FromRow for ResultOfcreate_author with from_row(row : @sqlite.Statement) -> ResultOfcreate_author raise SQLiteError {
   try {
+    let row = SqliteStatement(row)
     
     
     ResultOfcreate_author::{}
     
   } catch {
-    _ => raise SQLiteError::RowConversionError
+    e => raise SQLiteError::RowConversionError(e)
   }
 }
 pub fn create_author(database: @sqlite.Database, id: Int,name: String,bio: Option[String],) -> Unit raise SQLiteError {
@@ -111,12 +114,13 @@ pub(all)struct ResultOfdelete_author {
 
 impl FromRow for ResultOfdelete_author with from_row(row : @sqlite.Statement) -> ResultOfdelete_author raise SQLiteError {
   try {
+    let row = SqliteStatement(row)
     
     
     ResultOfdelete_author::{}
     
   } catch {
-    _ => raise SQLiteError::RowConversionError
+    e => raise SQLiteError::RowConversionError(e)
   }
 }
 pub fn delete_author(database: @sqlite.Database, id: Int,) -> Unit raise SQLiteError {
@@ -138,12 +142,13 @@ pub(all)struct ResultOfcreate_author_table {
 
 impl FromRow for ResultOfcreate_author_table with from_row(row : @sqlite.Statement) -> ResultOfcreate_author_table raise SQLiteError {
   try {
+    let row = SqliteStatement(row)
     
     
     ResultOfcreate_author_table::{}
     
   } catch {
-    _ => raise SQLiteError::RowConversionError
+    e => raise SQLiteError::RowConversionError(e)
   }
 }
 pub fn create_author_table(database: @sqlite.Database, ) -> Unit raise SQLiteError {
@@ -162,53 +167,3 @@ pub fn create_author_table(database: @sqlite.Database, ) -> Unit raise SQLiteErr
  })
  .unwrap_or_error(PrepareStatementError)
 }
- ///|
- pub suberror SQLiteError {
-   RowConversionError
-   PrepareStatementError
- } derive(Show)
- 
- ///|
- trait FromRow {
-   from_row(row : @sqlite.Statement) -> Self raise SQLiteError
- }
- 
- ///|
- trait ToSqlValue {
-   to_sql_value(Self) -> @sqlite.SqlValue
- }
- 
- ///|
- fn to_sql_values(array : Array[&ToSqlValue]) -> Array[@sqlite.SqlValue] {
-   array.map(v => v.to_sql_value())
- }
- 
- impl ToSqlValue for Int64 with to_sql_value(self : Int64) -> @sqlite.SqlValue {
-   @sqlite.SqlValue::Int64(self)
- }
- ///|
- impl ToSqlValue for Int with to_sql_value(self : Int) -> @sqlite.SqlValue {
-   @sqlite.SqlValue::Int(self)
- }
- ///|
- impl ToSqlValue for Double with to_sql_value(self : Double) -> @sqlite.SqlValue {
-   @sqlite.SqlValue::Double(self)
- }
- 
- ///|
- impl ToSqlValue for String with to_sql_value(self : String) -> @sqlite.SqlValue {
-   @sqlite.SqlValue::Text(@encoding/utf8.encode(self))
- }
- 
- ///|
- impl ToSqlValue for Bytes with to_sql_value(self : Bytes) -> @sqlite.SqlValue {
-   @sqlite.SqlValue::Blob(self)
- }
- 
- ///|
- impl[T : ToSqlValue] ToSqlValue for T? with to_sql_value(self : T?) -> @sqlite.SqlValue {
-   match self {
-     Some(value) => value.to_sql_value()
-     None => @sqlite.SqlValue::Null
-   }
- }

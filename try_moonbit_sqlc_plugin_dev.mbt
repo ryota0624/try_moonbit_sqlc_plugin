@@ -22,7 +22,7 @@ pub fn sum(data~ : Array[Int], start? : Int = 0, length? : Int) -> Int {
 // https://github.com/sqlc-dev/plugin-sdk-go/blob/main/metadata/meta.go#L15-L26
 
 ///|
-enum Cmd {
+priv enum Cmd {
   Exec
   ExecResult
   ExecRows
@@ -71,7 +71,10 @@ pub fn process_generate_request(
   generate_request : @plugin.GenerateRequest,
 ) -> @plugin.GenerateResponse raise {
   let codes = generate_code(generate_request)
-  let file = @plugin.File::new("queries.mbt", @encoding/utf8.encode(codes))
+  let query_file = @plugin.File::new(
+    "queries.mbt",
+    @encoding/utf8.encode(codes),
+  )
   let sqlite_pkg_json =
     #|{
     #|	"import": [
@@ -82,24 +85,50 @@ pub fn process_generate_request(
     "moon.pkg.json",
     @encoding/utf8.encode(sqlite_pkg_json),
   )
-  @plugin.GenerateResponse::new([file, pkg_json_file])
+  let utility_code_file = @plugin.File::new(
+    "sqlite_utility.mbt",
+    @encoding/utf8.encode(
+      sqlite_utility_code_error +
+      sqlite_utility_code_to_sql_value +
+      sqlite_utility_code_from_sql_value,
+    ),
+  )
+  @plugin.GenerateResponse::new([query_file, utility_code_file, pkg_json_file])
 }
 
 ///|
-let sqlite_utility_code =
+let sqlite_utility_code_error =
   #| ///|
-  #| pub suberror SQLiteError {
-  #|   RowConversionError
-  #|   PrepareStatementError
-  #| } derive(Show)
-  #| 
+  #|pub suberror SQLiteError {
+  #|  RowConversionError(ColumnExtractionError)
+  #|  PrepareStatementError
+  #|} derive(Show)
+  #|
   #| ///|
-  #| trait FromRow {
+  #|pub suberror ColumnExtractionError (Int, String) derive(Show)
+  #|
+  #|///|
+  #|fn sqlValueTypeName(value : @sqlite.SqlValue) -> String {
+  #|  match value {
+  #|    @sqlite.SqlValue::Null => "Null"
+  #|    @sqlite.SqlValue::Int(_) => "Int"
+  #|    @sqlite.SqlValue::Int64(_) => "Int64"
+  #|    @sqlite.SqlValue::Double(_) => "Double"
+  #|    @sqlite.SqlValue::Text(_) => "Text"
+  #|    @sqlite.SqlValue::Blob(_) => "Blob"
+  #|  }
+  #|}
+///|
+
+///|
+let sqlite_utility_code_to_sql_value =
+  #| ///|
+  #|priv trait FromRow {
   #|   from_row(row : @sqlite.Statement) -> Self raise SQLiteError
-  #| }
+  #|}
   #| 
   #| ///|
-  #| trait ToSqlValue {
+  #|priv trait ToSqlValue {
   #|   to_sql_value(Self) -> @sqlite.SqlValue
   #| }
   #| 
@@ -137,6 +166,123 @@ let sqlite_utility_code =
   #|     None => @sqlite.SqlValue::Null
   #|   }
   #| }
+  #|
+  #|
+
+///|
+///|
+let sqlite_utility_code_from_sql_value =
+  #| priv struct SqliteStatement(@sqlite.Statement)
+  #| 
+  #| ///|
+  #| fn[T : FromSqlValue] SqliteStatement::column(
+  #|   self : SqliteStatement,
+  #|   index : Int,
+  #| ) -> T raise ColumnExtractionError {
+  #|   from_sql_value(self.0.column(index), index)
+  #| }
+  #| 
+  #| ///|
+  #| priv trait FromSqlValue {
+  #|   from_sql_value(value : @sqlite.SqlValue, columnIndex : Int) -> Self raise ColumnExtractionError
+  #| }
+  #| 
+  #| ///|
+  #| impl FromSqlValue for String with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> String raise ColumnExtractionError {
+  #|   match value {
+  #|     @sqlite.SqlValue::Text(bytes) => {
+  #|       let text = try? (bytes |> @encoding/utf8.decode)
+  #|       text
+  #|       .map_err(_ => ColumnExtractionError((columnIndex, "utf8 decode error")))
+  #|       .unwrap_or_error()
+  #|     }
+  #|     a =>
+  #|       raise ColumnExtractionError(
+  #|         (columnIndex, "type mismatch actual \{sqlValueTypeName(a)}"),
+  #|       )
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| impl FromSqlValue for Int with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> Int raise ColumnExtractionError {
+  #|   match value {
+  #|     @sqlite.SqlValue::Int(v) => v
+  #|     @sqlite.SqlValue::Int64(v) => v.to_int()
+  #|     _ =>
+  #|       raise ColumnExtractionError(
+  #|         (columnIndex, "type mismatch actual \{sqlValueTypeName(value)}"),
+  #|       )
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| impl FromSqlValue for Double with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> Double raise ColumnExtractionError {
+  #|   match value {
+  #|     @sqlite.SqlValue::Double(v) => v
+  #|     _ =>
+  #|       raise ColumnExtractionError(
+  #|         (columnIndex, "type mismatch actual \{sqlValueTypeName(value)}"),
+  #|       )
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| impl FromSqlValue for Bytes with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> Bytes raise ColumnExtractionError {
+  #|   match value {
+  #|     @sqlite.SqlValue::Blob(v) => v
+  #|     _ =>
+  #|       raise ColumnExtractionError(
+  #|         (columnIndex, "type mismatch actual \{sqlValueTypeName(value)}"),
+  #|       )
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| impl FromSqlValue for Int64 with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> Int64 raise ColumnExtractionError {
+  #|   match value {
+  #|     @sqlite.SqlValue::Int64(v) => v
+  #|     _ =>
+  #|       raise ColumnExtractionError(
+  #|         (columnIndex, "type mismatch actual \{sqlValueTypeName(value)}"),
+  #|       )
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| impl[T : FromSqlValue] FromSqlValue for T? with from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> T? raise ColumnExtractionError {
+  #|   if value is @sqlite.SqlValue::Null {
+  #|     None
+  #|   } else {
+  #|     Some(FromSqlValue::from_sql_value(value, columnIndex))
+  #|   }
+  #| }
+  #| 
+  #| ///|
+  #| fn[T : FromSqlValue] from_sql_value(
+  #|   value : @sqlite.SqlValue,
+  #|   columnIndex : Int,
+  #| ) -> T raise ColumnExtractionError {
+  #|   FromSqlValue::from_sql_value(value, columnIndex)
+  #| }
+  #|
 
 ///|
 pub fn generate_code(
@@ -145,7 +291,6 @@ pub fn generate_code(
   let codes = generate_request.queries
     .map(Query::from_plugin_query(_, engine=generate_request.settings.engine))
     .map(generate_code_from_query)
-  codes.push(sqlite_utility_code)
   codes.join("\n")
 }
 
@@ -240,7 +385,7 @@ fn generate_code_from_query(query : Query) -> String raise {
         "field_name": Json::string(col.name),
         "field_type": Json::string(col.mbt_type),
         "field_extractor_name": Json::string(
-          sqlite_field_extractor_name_from_mbt_type(col.mbt_type, index),
+          ["row", sqlite_field_extractor_name_from_mbt_type(index)].join("|>"),
         ),
       })),
     }),
@@ -280,31 +425,8 @@ fn generate_code_from_query(query : Query) -> String raise {
 }
 
 ///|
-fn sqlite_field_extractor_name_from_mbt_type(
-  mbt_type : String,
-  field_index : Int,
-) -> String raise {
-  /// TODO: option考慮
-  let has_option = mbt_type.has_prefix("Option[") && mbt_type.has_suffix("]")
-  let exclude_option = if has_option {
-    mbt_type.strip_prefix("Option[").unwrap().strip_suffix("]").unwrap()
-  } else {
-    mbt_type
-  }
-  let extract_primitive_type = match exclude_option {
-    "Int" => "column_int(\{field_index})"
-    "Int64" => "column_int64(\{field_index})"
-    "Double" => "column_double(\{field_index})"
-    "String" => "column_text(\{field_index}) |> @encoding/utf8.decode"
-    "Bytes" => "column_blob(\{field_index})"
-    other =>
-      fail("Unsupported column type for FromRow implementation: \{other}")
-  }
-  if has_option {
-    "\{extract_primitive_type} |> Some"
-  } else {
-    extract_primitive_type
-  }
+fn sqlite_field_extractor_name_from_mbt_type(field_index : Int) -> String {
+  "SqliteStatement::column(\{field_index})"
 }
 
 ///|
@@ -369,14 +491,15 @@ let result_type_struct_template =
   #|
   #|impl FromRow for {{struct_name}} with from_row(row : @sqlite.Statement) -> {{struct_name}} raise SQLiteError {
   #|  try {
+  #|    let row = SqliteStatement(row)
   #|    {{#fields}} 
-  #|      let {{field_name}} = row.{{{field_extractor_name}}}
+  #|    let {{field_name}} = {{{field_extractor_name}}}
   #|    {{/fields}}
   #|    {{=<% %>=}}
   #|    <%struct_name%>::{<%#fields%><%field_name%>, <%/fields%>}
   #|    <%={{ }}=%>
   #|  } catch {
-  #|    _ => raise SQLiteError::RowConversionError
+  #|    e => raise SQLiteError::RowConversionError(e)
   #|  }
   #|}
   #|
