@@ -118,6 +118,7 @@ let sqlite_utility_code_error =
   #|    @sqlite.SqlValue::Blob(_) => "Blob"
   #|  }
   #|}
+
 ///|
 
 ///|
@@ -170,6 +171,7 @@ let sqlite_utility_code_to_sql_value =
   #|
 
 ///|
+
 ///|
 let sqlite_utility_code_from_sql_value =
   #| priv struct SqliteStatement(@sqlite.Statement)
@@ -359,10 +361,10 @@ fn plugin_column_type_to_mbt_type(
 
 ///|
 fn sqlite_plugin_column_type_to_mbt_type(
-  plugin_type : @plugin.Identifier,
+  identifier : @plugin.Identifier,
   is_not_null : Bool,
 ) -> String raise {
-  let t = match plugin_type.name {
+  let t = match identifier.name {
     "integer" => "Int"
     "text" => "String"
     other => fail("Unsupported SQLite column type: \{other}")
@@ -388,6 +390,7 @@ fn generate_code_from_query(query : Query) -> String raise {
           ["row", sqlite_field_extractor_name_from_mbt_type(index)].join("|>"),
         ),
       })),
+      "is_columns_empty": Json::boolean(query.columns.is_empty()),
     }),
   )
   let query_template = match query.cmd {
@@ -490,17 +493,21 @@ let result_type_struct_template =
   #|} derive(ToJson, FromJson, Show)
   #|
   #|impl FromRow for {{struct_name}} with from_row(row : @sqlite.Statement) -> {{struct_name}} raise SQLiteError {
+  #|  {{^is_columns_empty}}
   #|  try {
-  #|    let row = SqliteStatement(row)
-  #|    {{#fields}} 
+  #|    let row = SqliteStatement(row) 
+  #|  {{/is_columns_empty}}
+  #|    {{#fields}}
   #|    let {{field_name}} = {{{field_extractor_name}}}
   #|    {{/fields}}
   #|    {{=<% %>=}}
   #|    <%struct_name%>::{<%#fields%><%field_name%>, <%/fields%>}
   #|    <%={{ }}=%>
+  #|  {{^is_columns_empty}}
   #|  } catch {
   #|    e => raise SQLiteError::RowConversionError(e)
   #|  }
+  #|  {{/is_columns_empty}}
   #|}
   #|
 
